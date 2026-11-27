@@ -1,7 +1,18 @@
 import { createHash, randomBytes } from "node:crypto";
+import {
+  MissingRequiredClientCapabilityError,
+  ProtocolError,
+  ProtocolErrorCode,
+  type CallToolResult,
+  type McpServer,
+  type ServerContext,
+} from "@modelcontextprotocol/server";
+import { z } from "zod";
+import { codeVersion, fetchLibraryCode, indexingAnswer } from "./api.js";
+import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
 import { credentialOwner } from "./credential-owner.js";
 import type { CodeTool } from "./tool-names.js";
-import type { ClientContext, CodeRequest } from "./types.js";
+import type { ClientContext, CodeRequest, ContextResponse } from "./types.js";
 
 // MCP tasks for the code tools (the Tasks extension, SEP-2663). When a code tool call finds the
 // source still being indexed and the client declared the extension, the call answers with a task.
@@ -88,6 +99,12 @@ export interface CodeTaskStore {
   releaseCheck(gate: string): Promise<void>;
 }
 
+/** Drops the oldest entry (the first inserted) of a map that has grown past `max`. */
+function trimOldest(map: Map<string, unknown>, max: number): void {
+  const oldest = map.size > max ? map.keys().next().value : undefined;
+  if (oldest !== undefined) map.delete(oldest);
+}
+
 /** Tasks in this process: right for stdio, where one process serves one client. */
 export class MemoryCodeTaskStore implements CodeTaskStore {
   private readonly records = new Map<string, CodeTaskRecord>();
@@ -107,11 +124,7 @@ export class MemoryCodeTaskStore implements CodeTaskStore {
     if (current && current.status !== "working") return false;
     this.records.delete(taskId);
     this.records.set(taskId, record);
-    // The oldest task goes first.
-    for (const map of [this.records, this.gates] as Map<string, unknown>[]) {
-      const oldest = map.size > this.maxTasks ? map.keys().next().value : undefined;
-      if (oldest !== undefined) map.delete(oldest);
-    }
+    trimOldest(this.records, this.maxTasks);
     return true;
   }
 
@@ -120,6 +133,7 @@ export class MemoryCodeTaskStore implements CodeTaskStore {
     if (last !== undefined && nowMs - last < gapMs) return false;
     this.gates.delete(gate);
     this.gates.set(gate, nowMs);
+    trimOldest(this.gates, this.maxTasks);
     return true;
   }
 
@@ -166,8 +180,16 @@ export function callerBinding(context: ClientContext): string {
  * counts them. Parallel tasks for one version (a grep and a glob) share it.
  */
 export function checkGate(record: Pick<CodeTaskRecord, "caller" | "request">): string {
-  const { libraryId, version } = record.request;
-  return sha256(`${record.caller}|${libraryId.trim().toLowerCase()}|${version?.trim() ?? ""}`);
+  // The version as the API reads it: from `version` (without a copied library ID prefix), else
+  // from a versioned library ID ("/org/project/v1.2.3"); none and "latest" are the same.
+  const [owner, project, ...inId] = record.request.libraryId
+    .trim()
+    .toLowerCase()
+    .split("/")
+    .filter(Boolean);
+  let version = codeVersion(record.request)?.trim() || inId.join("/");
+  if (version === "latest") version = "";
+  return sha256(`${record.caller}|/${owner}/${project}|${version}`);
 }
 
 /** The poll interval for the API's `retryAfter`: never below it, and at least 30 seconds. */
@@ -241,4 +263,123 @@ export async function findCodeTask(
 ): Promise<CodeTaskRecord | null> {
   const record = await store.get(taskId, nowMs);
   return record && record.caller === callerBinding(context) ? record : null;
+}
+
+/** The task of this caller, or the -32602 "Unknown task" error the tasks/* methods answer. */
+async function requireCodeTask(
+  store: CodeTaskStore,
+  taskId: string,
+  context: ClientContext,
+  nowMs: number
+): Promise<CodeTaskRecord> {
+  const record = await findCodeTask(store, taskId, context, nowMs);
+  if (!record) throw new ProtocolError(ProtocolErrorCode.InvalidParams, "Unknown task");
+  return record;
+}
+
+/** Turns a /v2/code answer into the tool result (code-tools.ts). */
+type ToolResult = (response: ContextResponse) => CallToolResult;
+
+/**
+ * The state of a code tool task for tasks/get. A working task asks the API again only when its
+ * gate (one per caller and library version) lets it; any other poll answers `working` at once. An
+ * ended task answers from its record, so it costs no request. The tool call is recorded in
+ * telemetry when its task completes, with the outcome of its result.
+ */
+export async function getCodeTask(
+  store: CodeTaskStore,
+  taskId: string,
+  ctx: ClientContext,
+  toResult: ToolResult,
+  nowMs = Date.now()
+): Promise<CodeTaskView> {
+  const record = await requireCodeTask(store, taskId, ctx, nowMs);
+  const gate = checkGate(record);
+  if (record.status !== "working" || !(await store.claimCheck(gate, nowMs, checkGapMs(record))))
+    return codeTaskView(taskId, record);
+
+  let response = await fetchLibraryCode(record.request, ctx, record.tool);
+  const waiting = nowMs - record.createdAt < CODE_TASK_WAIT_MS;
+  if (response.transient) {
+    // A timeout or a gateway error says nothing about the index: the task waits on, and after
+    // the wait it ends with the "being indexed" answer it last had.
+    if (waiting) return codeTaskView(taskId, record);
+    response = { data: indexingAnswer(record.message, record.tool), outcome: "not_found" };
+  }
+
+  const next = { ...record, updatedAt: nowMs };
+  if (response.indexing && waiting) {
+    next.pollSeconds = pollSeconds(response.indexing.retryAfter);
+    next.message = response.indexing.message;
+  } else {
+    // The result, or after the wait the "being indexed" answer the call gives without a task.
+    next.status = "completed";
+    next.result = toResult(response);
+    // The index is done: the other tasks of the version may ask at their next poll.
+    if (!response.indexing) await store.releaseCheck(gate);
+  }
+  if (await store.put(taskId, next)) {
+    if (next.status === "completed") recordToolCallTelemetry(ctx, response.outcome);
+    return codeTaskView(taskId, next);
+  }
+  // The task ended meanwhile (a cancel won): answer what is stored.
+  return codeTaskView(taskId, (await store.get(taskId, nowMs)) ?? next);
+}
+
+/**
+ * tasks/cancel: a working task ends as `cancelled`, and its tool call is recorded as the
+ * "being indexed" answer it had. The index is not stopped, because the next call for the version
+ * uses it. Cancelling an ended task changes nothing.
+ */
+export async function cancelCodeTask(
+  store: CodeTaskStore,
+  taskId: string,
+  ctx: ClientContext,
+  nowMs = Date.now()
+): Promise<void> {
+  const record = await requireCodeTask(store, taskId, ctx, nowMs);
+  if (record.status !== "working") return;
+  if (await store.put(taskId, { ...record, status: "cancelled", updatedAt: nowMs }))
+    recordToolCallTelemetry(ctx, "not_found");
+}
+
+const taskParams = z.object({ taskId: z.string().min(1).max(MAX_TASK_ID_LENGTH) }).loose();
+
+/**
+ * Registers tasks/get, tasks/cancel and tasks/update. They answer only a request that declares
+ * the Tasks extension (-32021).
+ */
+export function registerCodeTaskHandlers(
+  server: McpServer,
+  getClientContext: (toolCtx: ServerContext) => ClientContext,
+  store: CodeTaskStore,
+  toResult: ToolResult
+): void {
+  const context = (toolCtx: ServerContext): ClientContext => {
+    if (!clientDeclaresTasks(toolCtx.mcpReq.envelope))
+      throw new MissingRequiredClientCapabilityError({
+        requiredCapabilities: { extensions: { [TASKS_EXTENSION]: {} } },
+      });
+    return getClientContext(toolCtx);
+  };
+  server.server.setRequestHandler("tasks/get", { params: taskParams }, ({ taskId }, toolCtx) =>
+    getCodeTask(store, taskId, context(toolCtx), toResult)
+  );
+  server.server.setRequestHandler(
+    "tasks/cancel",
+    { params: taskParams },
+    async ({ taskId }, toolCtx) => {
+      await cancelCodeTask(store, taskId, context(toolCtx));
+      return {};
+    }
+  );
+  // No task asks the client for input, so there is nothing to update.
+  server.server.setRequestHandler(
+    "tasks/update",
+    { params: taskParams },
+    async ({ taskId }, toolCtx) => {
+      await requireCodeTask(store, taskId, context(toolCtx), Date.now());
+      return {};
+    }
+  );
 }

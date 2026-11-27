@@ -85,7 +85,7 @@ export function registerExperimentalTools(
   server: McpServer,
   getClientContext: (toolCtx: ServerContext) => ClientContext,
   enabled: ReadonlySet<ExperimentalTool>,
-  codeTaskStore: CodeTaskStore | null = null
+  codeTaskStore: CodeTaskStore | null
 ): void {
   /**
    * Answers a tool call with the API's text and records its outcome. Only an error is `isError`:

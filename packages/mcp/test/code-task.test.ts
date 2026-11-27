@@ -5,21 +5,26 @@ import {
   createMcpHandler,
 } from "@modelcontextprotocol/server";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+vi.mock("../src/lib/auth-lifecycle-telemetry.js", () => ({ recordToolCallTelemetry: vi.fn() }));
 import {
   CODE_TASK_TTL_MS,
   CODE_TASK_WAIT_MS,
   MemoryCodeTaskStore,
   TASKS_EXTENSION,
   callerBinding,
+  cancelCodeTask,
   checkGate,
   clientDeclaresTasks,
   createCodeTask,
   findCodeTask,
+  getCodeTask,
   pollSeconds,
   type CodeTaskStore,
   type CodeTaskView,
 } from "../src/lib/code-task.js";
-import { cancelCodeTask, getCodeTask, registerCodeTools } from "../src/lib/code-tools.js";
+import { recordToolCallTelemetry } from "../src/lib/auth-lifecycle-telemetry.js";
+import { codeToolResult, registerCodeTools } from "../src/lib/code-tools.js";
 import { OAUTH_AUTH_SERVER_URL } from "../src/lib/constants.js";
 import type { ClientContext, CodeRequest } from "../src/lib/types.js";
 
@@ -53,6 +58,7 @@ let fetchMock: ReturnType<typeof vi.fn<typeof fetch>>;
 let store: MemoryCodeTaskStore;
 
 beforeEach(() => {
+  vi.mocked(recordToolCallTelemetry).mockClear();
   store = new MemoryCodeTaskStore();
   fetchMock = vi.fn<typeof fetch>();
   vi.stubGlobal("fetch", fetchMock);
@@ -82,7 +88,7 @@ async function newTask(
 }
 
 const poll = (taskId: string, seconds: number, context = CALLER) =>
-  getCodeTask(store, taskId, context, T0 + seconds * 1000);
+  getCodeTask(store, taskId, context, codeToolResult, T0 + seconds * 1000);
 
 describe("clientDeclaresTasks", () => {
   const envelope = (capabilities: unknown, meta: object = MODERN) => ({
@@ -200,6 +206,13 @@ describe("MemoryCodeTaskStore", () => {
     expect((await store.get("a", T0))?.status).toBe("cancelled");
   });
 
+  test("keeps the newest gates when it has too many", async () => {
+    const small = new MemoryCodeTaskStore(2);
+    for (const gate of ["g1", "g2", "g3"]) await small.claimCheck(gate, T0, 0);
+    expect(await small.claimCheck("g1", T0 + 1, 60_000)).toBe(true);
+    expect(await small.claimCheck("g3", T0 + 1, 60_000)).toBe(false);
+  });
+
   test("lets a request through the gate only after the gap or a release", async () => {
     expect(await store.claimCheck("g", T0, 0)).toBe(true);
     expect(await store.claimCheck("g", T0 + 44_000, 45_000)).toBe(false);
@@ -246,6 +259,18 @@ describe("poll interval", () => {
       await poll(glob.taskId, seconds);
     }
     expect(fetchMock).toHaveBeenCalledTimes(10);
+  });
+
+  test("one gate per version, however the version is written", async () => {
+    const gate = (request: CodeRequest) => checkGate({ caller: "x", request });
+    const base = gate({ libraryId: "/honojs/hono", version: "v4.7.0" });
+    expect(gate({ libraryId: "/honojs/hono", version: "/honojs/hono/v4.7.0" })).toBe(base);
+    expect(gate({ libraryId: "/honojs/hono/v4.7.0" })).toBe(base);
+    expect(gate({ libraryId: "/HonoJS/hono", version: " v4.7.0 " })).toBe(base);
+    expect(gate({ libraryId: "/honojs/hono", version: "latest" })).toBe(
+      gate({ libraryId: "/honojs/hono" })
+    );
+    expect(gate({ libraryId: "/honojs/hono", version: "v4.8.0" })).not.toBe(base);
   });
 
   test("another version, or another caller, has its own requests", async () => {
@@ -361,11 +386,13 @@ describe("getCodeTask", () => {
     expect(view.result).toEqual({ content: [{ type: "text", text: message }] });
   });
 
-  test("ends after the 30 minute wait even when the API keeps timing out", async () => {
+  test("ends after the 30 minute wait with the 'being indexed' answer when the API times out", async () => {
     fetchMock.mockRejectedValue(new Error("timeout"));
     const view = await poll((await newTask()).taskId, CODE_TASK_WAIT_MS / 1000);
     expect(view.status).toBe("completed");
-    expect(view.result).toMatchObject({ isError: true });
+    expect(JSON.stringify(view.result)).toContain(INDEXING.message);
+    expect(JSON.stringify(view.result)).toContain("answer from query-docs now");
+    expect(view.result).not.toHaveProperty("isError");
   });
 
   test("ends after the 30 minute wait with the answer the call gives without a task", async () => {
@@ -399,6 +426,26 @@ describe("getCodeTask", () => {
       return new Response(RESULT_TEXT);
     });
     expect((await poll(taskId, 60)).status).toBe("cancelled");
+  });
+});
+
+describe("telemetry", () => {
+  test("records a call that became a task once, when the task completes", async () => {
+    const { taskId } = await newTask();
+    fetchMock.mockImplementationOnce(async () => indexing202());
+    await poll(taskId, 60);
+    expect(recordToolCallTelemetry).not.toHaveBeenCalled();
+    fetchMock.mockImplementationOnce(async () => new Response(RESULT_TEXT));
+    await poll(taskId, 120);
+    await poll(taskId, 180);
+    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "success"]]);
+  });
+
+  test("records a cancelled task as the 'being indexed' answer it had", async () => {
+    const { taskId } = await newTask();
+    await cancelCodeTask(store, taskId, CALLER);
+    await cancelCodeTask(store, taskId, CALLER);
+    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "not_found"]]);
   });
 });
 
@@ -486,6 +533,7 @@ describe("over MCP", () => {
   test("a 202 stays a text answer for a client that did not declare tasks", async () => {
     fetchMock.mockResolvedValue(indexing202());
     const { result } = await grep(false);
+    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "not_found"]]);
     expect(result?.resultType).toBe("complete");
     expect(result?.taskId).toBeUndefined();
     expect(JSON.stringify(result?.content)).toContain("answer from query-docs now");
@@ -515,6 +563,7 @@ describe("over MCP", () => {
   test("a 202 becomes a task for a client that declared tasks", async () => {
     fetchMock.mockResolvedValue(indexing202(45));
     const { result } = await grep(true);
+    expect(recordToolCallTelemetry).not.toHaveBeenCalled();
     expect(result).toMatchObject({ resultType: "task", status: "working", pollIntervalMs: 45_000 });
     expect(result?.ttlMs).toBe(CODE_TASK_TTL_MS);
     const record = await findCodeTask(store, String(result?.taskId), CALLER);

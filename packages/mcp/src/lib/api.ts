@@ -323,6 +323,15 @@ async function codeErrorAnswer(
   return { data: message, outcome: "error", ...transient };
 }
 
+/** The `version` sent to /v2/code. An agent may copy a full versioned ID ("/vercel/next.js/v15.1.8") into it. */
+export function codeVersion(
+  request: Pick<CodeRequest, "libraryId" | "version">
+): string | undefined {
+  return request.version?.startsWith(`${request.libraryId}/`)
+    ? request.version.slice(request.libraryId.length + 1)
+    : request.version;
+}
+
 /**
  * Queries a library's source code at the version its docs were built from.
  * A 202 means the source is still being indexed: that is a normal answer, and the agent goes on
@@ -336,10 +345,7 @@ export async function fetchLibraryCode(
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
     url.searchParams.set("libraryId", request.libraryId);
-    // An agent may copy a full versioned ID ("/vercel/next.js/v15.1.8") into version.
-    const version = request.version?.startsWith(`${request.libraryId}/`)
-      ? request.version.slice(request.libraryId.length + 1)
-      : request.version;
+    const version = codeVersion(request);
     if (version) url.searchParams.set("version", version);
     if (request.operation) url.searchParams.set("operation", request.operation);
     if (request.pattern !== undefined) url.searchParams.set("pattern", request.pattern);

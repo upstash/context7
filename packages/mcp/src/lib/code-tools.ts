@@ -1,26 +1,11 @@
-import {
-  MissingRequiredClientCapabilityError,
-  ProtocolError,
-  ProtocolErrorCode,
-  type CallToolResult,
-  type McpServer,
-  type ServerContext,
-} from "@modelcontextprotocol/server";
+import type { CallToolResult, McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { fetchLibraryCode } from "./api.js";
 import {
-  CODE_TASK_WAIT_MS,
-  MAX_TASK_ID_LENGTH,
-  TASKS_EXTENSION,
-  checkGapMs,
-  checkGate,
   clientDeclaresTasks,
-  codeTaskView,
   createCodeTask,
-  findCodeTask,
-  pollSeconds,
+  registerCodeTaskHandlers,
   type CodeTaskStore,
-  type CodeTaskView,
 } from "./code-task.js";
 import { maybeElicitAuthSignIn } from "./auth/auth-prompt.js";
 import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
@@ -409,77 +394,13 @@ export function symbolRequest(input: z.infer<typeof symbolSchema>): CodeRequest 
 }
 
 /** The tool result for an answer of /v2/code, for the tool call and for a completed task. */
-function codeToolResult(response: ContextResponse): CallToolResult {
+export function codeToolResult(response: ContextResponse): CallToolResult {
   return {
     content: [{ type: "text" as const, text: rewriteCodeHints(response.data) }],
     // "Still indexing" is a normal answer: the agent answers from query-docs meanwhile.
     ...(response.outcome === "error" ? { isError: true } : {}),
   };
 }
-
-/**
- * The state of a code tool task for tasks/get (see code-task.ts). A working task asks the API
- * again only when its gate (one per caller and library version) lets it; any other poll answers
- * `working` at once. An ended task answers from its record, so it costs no request.
- */
-export async function getCodeTask(
-  store: CodeTaskStore,
-  taskId: string,
-  ctx: ClientContext,
-  nowMs = Date.now()
-): Promise<CodeTaskView> {
-  const record = await findCodeTask(store, taskId, ctx, nowMs);
-  if (!record) throw new ProtocolError(ProtocolErrorCode.InvalidParams, "Unknown task");
-  const gate = checkGate(record);
-  if (record.status !== "working" || !(await store.claimCheck(gate, nowMs, checkGapMs(record))))
-    return codeTaskView(taskId, record);
-
-  const response = await fetchLibraryCode(record.request, ctx, record.tool);
-  const waiting = nowMs - record.createdAt < CODE_TASK_WAIT_MS;
-  // A timeout or a gateway error says nothing about the index: the task waits on.
-  if (response.transient && waiting) return codeTaskView(taskId, record);
-
-  const next = { ...record, updatedAt: nowMs };
-  if (response.indexing && waiting) {
-    next.pollSeconds = pollSeconds(response.indexing.retryAfter);
-    next.message = response.indexing.message;
-  } else {
-    // The result, or after the wait the "being indexed" answer the call gives without a task.
-    next.status = "completed";
-    next.result = codeToolResult(response);
-    // The index is done: the other tasks of the version may ask at their next poll.
-    if (!response.indexing) await store.releaseCheck(gate);
-  }
-  if (await store.put(taskId, next)) return codeTaskView(taskId, next);
-  // The task ended meanwhile (a cancel won): answer what is stored.
-  return codeTaskView(taskId, (await store.get(taskId, nowMs)) ?? next);
-}
-
-/**
- * tasks/cancel: a working task ends as `cancelled`. The index is not stopped, because the next
- * call for the version uses it. Cancelling an ended task changes nothing.
- */
-export async function cancelCodeTask(
-  store: CodeTaskStore,
-  taskId: string,
-  ctx: ClientContext,
-  nowMs = Date.now()
-): Promise<void> {
-  const record = await findCodeTask(store, taskId, ctx, nowMs);
-  if (!record) throw new ProtocolError(ProtocolErrorCode.InvalidParams, "Unknown task");
-  if (record.status === "working")
-    await store.put(taskId, { ...record, status: "cancelled", updatedAt: nowMs });
-}
-
-/** The tasks/* methods answer only a request that declares the Tasks extension (-32021). */
-function requireTasks(toolCtx: ServerContext): void {
-  if (!clientDeclaresTasks(toolCtx.mcpReq.envelope))
-    throw new MissingRequiredClientCapabilityError({
-      requiredCapabilities: { extensions: { [TASKS_EXTENSION]: {} } },
-    });
-}
-
-const taskParams = z.object({ taskId: z.string().min(1).max(MAX_TASK_ID_LENGTH) }).loose();
 
 /**
  * Registers grep-code, glob-code, read-code and find-symbol. Experimental: called from
@@ -498,45 +419,20 @@ export function registerCodeTools(
     }
     const response = await fetchLibraryCode(request, ctx, tool);
     maybeElicitAuthSignIn(server, ctx);
-    recordToolCallTelemetry(ctx, response.outcome);
     // A client that declared the Tasks extension waits for the index itself, and the agent gets
-    // the real result. Any other client gets the "still indexing" text.
+    // the real result; the call is recorded when its task ends. Any other client gets the
+    // "still indexing" text.
     if (taskStore && response.indexing && clientDeclaresTasks(toolCtx.mcpReq.envelope)) {
       const task = await createCodeTask(taskStore, tool, request, response.indexing, ctx);
       // The SDK sends a tools/call result with a `resultType` as it is; its types do not model one.
       if (task) return { resultType: "task", ...task } as unknown as CallToolResult;
     }
+    recordToolCallTelemetry(ctx, response.outcome);
     return codeToolResult(response);
   };
 
   // The Tasks extension's methods, only where tasks can be stored (see index.ts).
-  if (taskStore) {
-    const store = taskStore;
-    server.server.setRequestHandler("tasks/get", { params: taskParams }, ({ taskId }, toolCtx) => {
-      requireTasks(toolCtx);
-      return getCodeTask(store, taskId, getClientContext(toolCtx));
-    });
-    server.server.setRequestHandler(
-      "tasks/cancel",
-      { params: taskParams },
-      async ({ taskId }, toolCtx) => {
-        requireTasks(toolCtx);
-        await cancelCodeTask(store, taskId, getClientContext(toolCtx));
-        return {};
-      }
-    );
-    // No task asks the client for input, so there is nothing to update.
-    server.server.setRequestHandler(
-      "tasks/update",
-      { params: taskParams },
-      async ({ taskId }, toolCtx) => {
-        requireTasks(toolCtx);
-        if (!(await findCodeTask(store, taskId, getClientContext(toolCtx))))
-          throw new ProtocolError(ProtocolErrorCode.InvalidParams, "Unknown task");
-        return {};
-      }
-    );
-  }
+  if (taskStore) registerCodeTaskHandlers(server, getClientContext, taskStore, codeToolResult);
 
   server.registerTool(
     GREP_CODE_TOOL,
