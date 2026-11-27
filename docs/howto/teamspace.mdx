@@ -35,6 +35,8 @@ Add team members, assign roles, and manage access to your Context7 dashboard fro
 | Rename teamspace      | ✓     | ✗     | ✗         |
 | Delete teamspace      | ✓     | ✗     | ✗         |
 
+<Note>Owners and admins choose who may use API keys on the **Settings** tab. See [Manage API Keys](/howto/api-keys#teamspace-api-key-access).</Note>
+
 ## Inviting Members
 
 <Steps>
@@ -59,7 +61,7 @@ The modal shows the **Shareable invite link** and a **Prompt** card. If no link 
 
 The prompt includes the invite link, the teamspace to select at sign-in, and the setup steps for each kind of tool:
 
-- **Coding agents** — run `npx ctx7@latest setup` in a terminal. Anyone who used Context7 before must run `npx ctx7@latest logout` first, because `setup` keeps an earlier login and does not show the teamspace picker.
+- **Coding agents** — run `npx ctx7@latest setup` in a terminal. Anyone who used Context7 before must run `npx ctx7@latest logout` first, because `setup` keeps an earlier login and does not show the teamspace picker. If the teamspace does not give members API keys, the prompt says to set up the MCP server with OAuth instead.
 - **claude.ai, the Claude app or ChatGPT** — add a custom connector with the URL `https://mcp.context7.com/mcp/oauth`.
 
 <Note>Every sign-in asks which teamspace to use. If a member selects the personal teamspace, they get none of the teamspace's private libraries and see no error.</Note>
