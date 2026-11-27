@@ -89,6 +89,8 @@ export interface ClientContext {
   experimentalTools?: readonly ExperimentalTool[];
   /** The caller's teamspace (`teamspaceOf`), whose skills are served next to context7-mcp. */
   teamspaceId?: string;
+  /** The caller's pseudonymous ID for team skill usage counts (`usageCallerOf`), with a teamspace only. */
+  skillCaller?: string;
   /** Mutable: set by the upstream API layer when the backend signals the
    *  client should be prompted to sign in. Read by the auth-prompt wrapper. */
   shouldPrompt?: boolean;

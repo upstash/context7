@@ -13,6 +13,7 @@ import {
 import { CONTEXT7_MCP_SKILL } from "./skill-md.js";
 import { canonicalSkillUri, safeDecode } from "./skill-uri.js";
 import { fetchTeamSkillFile, teamSkillsFor } from "./team-skills-snapshot.js";
+import { recordTeamSkillUse } from "./team-skills-usage.js";
 
 /**
  * The skills one caller sees through the MCP skills extension (SEP-2640): the repo's
@@ -199,22 +200,34 @@ function directoryChildren(skills: readonly Skill[], dir: string): DirectoryReso
   return [...children.values()].sort((a, b) => (a.uri < b.uri ? -1 : 1));
 }
 
+/** The skill name of a canonical `skill://<name>/...` URI. */
+const skillNameOf = (uri: string) => uri.slice("skill://".length).split("/", 1)[0];
+
 /**
  * The skills source for one caller. `teamspaceId` is the caller's teamspace (`teamspaceOf`); the
- * snapshot is read on every call, so a request sees the skills of that moment.
+ * snapshot is read on every call, so a request sees the skills of that moment. Team skill calls
+ * are counted for the admin page (team-skills-usage.ts), with `caller` (`usageCallerOf`).
  */
-export function skillSource(teamspaceId: string | undefined): SkillSource {
+export function skillSource(teamspaceId: string | undefined, caller?: string): SkillSource {
   const team = () => teamSkillsFor(teamspaceId);
   const skills = () => [CONTEXT7_MCP, ...(team()?.skills ?? [])];
   return {
     async list() {
-      return { skills: skills() };
+      const current = team();
+      if (current?.skills.length)
+        recordTeamSkillUse(current.teamspaceId, "list", undefined, caller);
+      return { skills: [CONTEXT7_MCP, ...(current?.skills ?? [])] };
     },
     async get(uri) {
       const key = canonicalSkillUri(uri);
       // The SDK checks the entry against the URI as sent, so only its exact canonical form matches.
       if (key === undefined || key !== uri) return undefined;
-      return key === CONTEXT7_MCP.uri ? CONTEXT7_MCP : team()?.entries.get(key);
+      if (key === CONTEXT7_MCP.uri) return CONTEXT7_MCP;
+      const current = team();
+      const entry = current?.entries.get(key);
+      if (current && entry)
+        recordTeamSkillUse(current.teamspaceId, "get", skillNameOf(key), caller);
+      return entry;
     },
     async read(uri) {
       const key = canonicalSkillUri(uri, { dropFragment: true });
@@ -223,7 +236,9 @@ export function skillSource(teamspaceId: string | undefined): SkillSource {
       const current = team();
       const file = current?.files.get(key);
       if (!current || !file) return undefined;
-      return readResult(key, await teamFile(current.teamspaceId, key, file));
+      const result = readResult(key, await teamFile(current.teamspaceId, key, file));
+      recordTeamSkillUse(current.teamspaceId, "read", skillNameOf(key), caller);
+      return result;
     },
     async readDirectory(uri) {
       const key = canonicalSkillUri(uri, { dropFragment: true })?.replace(/\/+$/, "");
@@ -243,12 +258,13 @@ export function skillSource(teamspaceId: string | undefined): SkillSource {
 export function attachSkills(
   server: McpServer,
   teamspaceId: string | undefined,
-  cacheHint: { ttlMs: number; cacheScope: "public" | "private" }
+  cacheHint: { ttlMs: number; cacheScope: "public" | "private" },
+  caller?: string
 ): void {
   // attach() is an @experimental SDK API: how an extension is wired to a server may change in a
   // minor SDK release, so recheck this call on every SDK upgrade.
   new SkillsExtension({
-    source: skillSource(teamspaceId),
+    source: skillSource(teamspaceId, caller),
     cacheHint,
     // Not strict: the SDK drops an invalid team entry instead of failing the team's skills/list.
     onWarning: ({ path, message }) => console.error(`[Context7] Skill ${path}: ${message}`),

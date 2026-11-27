@@ -79,6 +79,7 @@ import {
   startTeamSkillsSnapshot,
   teamspaceOf,
 } from "./lib/team-skills-snapshot.js";
+import { flushTeamSkillsUsage, usageCallerOf } from "./lib/team-skills-usage.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
@@ -286,7 +287,8 @@ function createMcpServer(
   mcpContext: McpRequestContext,
   experimentalTools: readonly ExperimentalTool[],
   signedIn: boolean,
-  teamspaceId?: string
+  teamspaceId?: string,
+  skillCaller?: string
 ) {
   const enabled: ReadonlySet<ExperimentalTool> = new Set(experimentalTools);
   const callerHint = signedIn || enabled.size > 0 ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT;
@@ -336,7 +338,8 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   attachSkills(
     server,
     teamspaceId,
-    signedIn && isTeamSkillsSnapshotEnabled() ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT
+    signedIn && isTeamSkillsSnapshotEnabled() ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT,
+    skillCaller
   );
 
   server.registerTool(
@@ -613,7 +616,8 @@ async function main() {
           mcpContext,
           context?.experimentalTools ?? [],
           !!context?.apiKey,
-          context?.teamspaceId
+          context?.teamspaceId,
+          context?.skillCaller
         );
       },
       {
@@ -717,6 +721,7 @@ async function main() {
         // The caller's teamspace, from the in-memory snapshot: its skills are listed next to
         // context7-mcp. Over stdio, or without the snapshot, there is none.
         context.teamspaceId = req.method === "POST" ? teamspaceOf(apiKey) : undefined;
+        if (context.teamspaceId) context.skillCaller = usageCallerOf(apiKey);
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
@@ -881,7 +886,8 @@ async function main() {
         },
       },
       {
-        flush: forceFlushTelemetry,
+        flush: () =>
+          Promise.all([forceFlushTelemetry(), flushTeamSkillsUsage()]).then(() => undefined),
         onerror: (error) => console.error("Failed to close MCP HTTP server:", error),
       }
     );
