@@ -39,6 +39,7 @@
   },
   "files": [
     "dist",
+    "public",
     "LICENSE",
     "README.md"
   ],
