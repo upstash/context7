@@ -259,6 +259,7 @@ Context7 requires outbound connectivity to the following:
 | `context7.com` | Online license only: license check, daily usage report, and public library search. See [Network and data flow](/enterprise/on-premise#network-and-data-flow) |
 | Your LLM provider (for example, `api.openai.com` or the regional AWS Bedrock Runtime endpoint) | AI inference and embeddings |
 | AWS credential endpoints, when using workload credentials | Resolving EKS Pod Identity, IRSA, ECS, or EC2 role credentials for Bedrock |
+| `aiplatform.googleapis.com` or `<location>-aiplatform.googleapis.com`, and the GKE metadata server | Vertex AI inference and embeddings, and Workload Identity tokens |
 | `github.com` / `gitlab.com`, or your self-hosted Git hosts | Repository cloning |
 | Your documentation sources | Website, Confluence, Notion, or Google Drive indexing |
 
@@ -266,7 +267,7 @@ An offline license (`ctx7off.` prefix) is checked locally and makes no calls to 
 
 To send these calls through an egress mirror, set `CONTEXT7_API_URL` (default `https://context7.com/api`).
 
-The server does not use `HTTP_PROXY` or `HTTPS_PROXY` for its own calls. Allow this egress directly or through a transparent proxy.
+To route this egress through a forward proxy, set `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` on the container. See [Egress proxy](/enterprise/deployment/docker#egress-proxy) for what goes through the proxy and what connects directly.
 
 If you use NetworkPolicies, ensure egress to these endpoints is allowed:
 

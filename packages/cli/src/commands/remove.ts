@@ -6,6 +6,9 @@ import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
 import {
   ALL_AGENT_NAMES,
+  LISTED_AGENT_NAMES,
+  agentOptionKey,
+  type AgentOptionKey,
   findAppendRuleFile,
   getAgent,
   resolveAppendRuleFile,
@@ -27,7 +30,7 @@ import { access, readFile, rm, writeFile } from "fs/promises";
 type Scope = "global" | "project";
 type UninstallMode = "mcp" | "cli";
 
-type UninstallOptions = Partial<Record<SetupAgent, boolean>> & {
+type UninstallOptions = Partial<Record<AgentOptionKey, boolean>> & {
   t3?: boolean;
   project?: boolean;
   yes?: boolean;
@@ -95,7 +98,8 @@ export function registerRemoveCommand(program: Command): void {
 
 function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
   return ALL_AGENT_NAMES.filter(
-    (name) => options[name] || (options.t3 && (name === "claude" || name === "codex"))
+    (name) =>
+      options[agentOptionKey(name)] || (options.t3 && (name === "claude" || name === "codex"))
   );
 }
 
@@ -154,7 +158,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
 
   if (detected.length === 0) {
     log.warn(
-      `No Context7 setup detected. Pass one of: ${ALL_AGENT_NAMES.map((name) => `--${name}`).join(", ")}.`
+      `No Context7 setup detected. Pass one of: ${LISTED_AGENT_NAMES.map((name) => `--${name}`).join(", ")}.`
     );
     return [];
   }
@@ -418,21 +422,68 @@ async function uninstallRule(agentName: SetupAgent, scope: Scope): Promise<Clean
   }
 }
 
+function skillsDirFor(agentName: SetupAgent, scope: Scope): string {
+  const agent = getAgent(agentName);
+  return scope === "global"
+    ? agent.skill.dir("global")
+    : join(process.cwd(), agent.skill.dir("project"));
+}
+
+/**
+ * Several agents install skills into one shared folder (for example
+ * `~/.agents/skills`). Returns, for each skill path, the agents outside this
+ * removal that still use that skill, so removal does not break them.
+ * Call it after the selected agents' MCP configs and rules are removed.
+ */
+async function findSharedSkillUsers(
+  removing: SetupAgent[],
+  scope: Scope,
+  skillNames: readonly string[]
+): Promise<Map<string, string[]>> {
+  const removingDirs = new Set(removing.map((agent) => skillsDirFor(agent, scope)));
+  const users = new Map<string, string[]>();
+
+  for (const other of ALL_AGENT_NAMES) {
+    if (removing.includes(other)) continue;
+    const dir = skillsDirFor(other, scope);
+    if (!removingDirs.has(dir)) continue;
+
+    const usesMcp = await hasMcpConfig(other, scope);
+    const usesCli = !usesMcp && (await hasRule(other, scope));
+
+    for (const skillName of skillNames) {
+      const needed = MODE_SKILLS.mcp.includes(skillName) ? usesMcp : usesCli;
+      if (!needed) continue;
+      const path = join(dir, skillName);
+      const names = users.get(path) ?? [];
+      names.push(getAgent(other).displayName);
+      users.set(path, names);
+    }
+  }
+
+  return users;
+}
+
 async function uninstallSkills(
   agentName: SetupAgent,
   scope: Scope,
-  skillNames: readonly string[]
+  skillNames: readonly string[],
+  sharedUsers: Map<string, string[]>
 ): Promise<SkillCleanupStatus[]> {
-  const agent = getAgent(agentName);
-  const skillsDir =
-    scope === "global"
-      ? agent.skill.dir("global")
-      : join(process.cwd(), agent.skill.dir("project"));
-
+  const skillsDir = skillsDirFor(agentName, scope);
   const results: SkillCleanupStatus[] = [];
 
   for (const skillName of skillNames) {
     const skillPath = join(skillsDir, skillName);
+    const users = sharedUsers.get(skillPath);
+    if (users && (await pathExists(skillPath))) {
+      results.push({
+        name: skillName,
+        status: `kept (used by ${users.join(", ")})`,
+        path: skillPath,
+      });
+      continue;
+    }
     try {
       await rm(skillPath, { recursive: true });
       results.push({ name: skillName, status: "removed", path: skillPath });
@@ -449,13 +500,17 @@ async function uninstallSkills(
   return results;
 }
 
-async function uninstallAgent(
+function skillNamesFor(modes: UninstallMode[]): string[] {
+  return Array.from(new Set(modes.flatMap((mode) => [...MODE_SKILLS[mode]])));
+}
+
+/** Removes the agent's MCP config and rule. Skills are removed in a second pass. */
+async function uninstallAgentConfig(
   agentName: SetupAgent,
   scope: Scope,
   modes: UninstallMode[]
 ): Promise<AgentCleanupResult> {
   const result: AgentCleanupResult = { agent: getAgent(agentName).displayName };
-  const skillNames = Array.from(new Set(modes.flatMap((mode) => [...MODE_SKILLS[mode]])));
   const shouldRemoveRule = modes.includes("mcp") || modes.includes("cli");
 
   if (modes.includes("mcp")) {
@@ -466,15 +521,12 @@ async function uninstallAgent(
     result.rule = await uninstallRule(agentName, scope);
   }
 
-  if (skillNames.length > 0) {
-    result.skills = await uninstallSkills(agentName, scope, skillNames);
-  }
-
   return result;
 }
 
 function iconForStatus(status: string): string {
   if (status === "removed") return pc.green("-");
+  if (status.startsWith("kept")) return pc.yellow("~");
   if (status === "not found") return pc.dim("~");
   return pc.red("!");
 }
@@ -535,7 +587,15 @@ async function removeCommand(options: UninstallOptions): Promise<void> {
   const results: AgentCleanupResult[] = [];
   for (const agentName of agents) {
     spinner.text = `Cleaning up ${getAgent(agentName).displayName}...`;
-    results.push(await uninstallAgent(agentName, scope, modes));
+    results.push(await uninstallAgentConfig(agentName, scope, modes));
+  }
+
+  const skillNames = skillNamesFor(modes);
+  if (skillNames.length > 0) {
+    const sharedUsers = await findSharedSkillUsers(agents, scope, skillNames);
+    for (const [index, agentName] of agents.entries()) {
+      results[index].skills = await uninstallSkills(agentName, scope, skillNames, sharedUsers);
+    }
   }
 
   spinner.succeed("Context7 cleanup complete");

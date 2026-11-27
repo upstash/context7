@@ -201,7 +201,9 @@ ctx7 setup --api-key YOUR_API_KEY
 ctx7 setup --oauth
 ```
 
-Without `--api-key` or `--oauth`, setup runs the OAuth device flow: it shows a verification link and short code that you open on any device to sign in, so it works the same locally or on a remote, headless, or SSH host. The device flow returns an API key that setup uses for authentication. `--oauth` is MCP-only — use it when an IDE handles the auth flow on your behalf.
+Without `--api-key` or `--oauth`, setup runs the OAuth device flow: it shows a verification link and short code that you open on any device to sign in, so it works the same locally or on a remote, headless, or SSH host. The device flow returns an API key that setup uses for authentication. `--oauth` is MCP-only — use it when an IDE handles the auth flow on your behalf. If your teamspace's API key policy refuses you a key (OAuth only, or keys for owners and admins only), MCP setup continues with OAuth instead, as with `--oauth`. This includes a key saved by an earlier login: setup checks it first, and signs you in again when the key is no longer valid. With `--stdio` it stops with an error, because the stdio server needs an API key.
+
+If the teamspace you pick does not allow you an API key (its policy is **Owners and admins only** and you are a developer, or it is **OAuth only**), setup continues with OAuth and configures the MCP server without a key. `--stdio` and `ctx7` CLI commands need an API key, so they are not available for that teamspace. To use another teamspace, log in again and pick it. See [Manage API Keys](/howto/api-keys#teamspace-api-key-access).
 
 ### On-premise setup
 
@@ -222,11 +224,11 @@ CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
   --codex
 ```
 
-The CLI checks `/api/auth/mcp` before writing configuration. It either configures anonymous access or writes `Authorization: Bearer <personal-key>`. When authentication is enabled and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content.
+The CLI checks `/api/auth/mcp` before writing configuration. It configures anonymous access, writes `Authorization: Bearer <personal-key>`, or, when the deployment uses [OAuth sign-in](/enterprise/security/mcp-oauth), writes no key so the client signs in through the browser. When the deployment needs a personal key and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content.
 
 When `--base-url` targets a custom deployment, setup skips the npm update check and telemetry and does not fetch rules or skills from GitHub or Context7 Cloud. After the CLI package is installed, the only network request made by setup is to the configured deployment. In a restricted environment, mirror `ctx7` and its dependencies in an internal npm registry and run the installed `ctx7` binary instead of `npx ctx7@latest`.
 
-For a custom deployment, `ctx7 setup` supports MCP setup only. It cannot be combined with `--oauth`, `--stdio`, or `--cli`.
+For a custom deployment, `ctx7 setup` supports MCP setup only. It cannot be combined with `--stdio` or `--cli`. `--oauth` works when the deployment offers OAuth sign-in.
 
 **What gets written — MCP mode:**
 

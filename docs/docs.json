@@ -86,7 +86,9 @@
                         "group": "Microsoft Entra ID",
                         "pages": [
                           "enterprise/enterprise-managed-auth/entra-sso",
-                          "enterprise/enterprise-managed-auth/entra"
+                          "enterprise/enterprise-managed-auth/entra",
+                          "enterprise/enterprise-managed-auth/mcp-gateway-entra",
+                          "enterprise/enterprise-managed-auth/entra-scim"
                         ]
                       },
                       "enterprise/enterprise-managed-auth/okta"
@@ -106,7 +108,9 @@
                           "enterprise/integrations/confluence",
                           "enterprise/integrations/google-drive",
                           "enterprise/integrations/notion",
-                          "enterprise/integrations/aws-bedrock"
+                          "enterprise/integrations/azure-devops",
+                          "enterprise/integrations/aws-bedrock",
+                          "enterprise/integrations/google-vertex-ai"
                         ]
                       },
                       {
@@ -115,7 +119,8 @@
                           "enterprise/security/entra-sso",
                           "enterprise/security/oidc-sso",
                           "enterprise/security/saml-sso",
-                          "enterprise/security/library-access"
+                          "enterprise/security/library-access",
+                          "enterprise/security/mcp-oauth"
                         ]
                       },
                       {

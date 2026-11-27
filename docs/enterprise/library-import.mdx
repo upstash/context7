@@ -48,7 +48,7 @@ flowchart LR
 In the [Context7 Cloud dashboard](https://context7.com), open **More → Export Libraries**. The link only appears for accounts with an offline license.
 
 <Frame>
-  ![Export Libraries link in the dashboard menu](/images/enterprise/library-import/export-menu.png)
+  <img src="/images/enterprise/library-import/export-menu.png" alt="Export Libraries link in the dashboard menu" />
 </Frame>
 
 </Step>
@@ -60,7 +60,7 @@ Search for libraries by name and click **Add** to put them in your selection. Th
 You can export up to 50 libraries at once.
 
 <Frame>
-  ![Searching and selecting libraries to export](/images/enterprise/library-import/export-select.png)
+  <img src="/images/enterprise/library-import/export-select.png" alt="Searching and selecting libraries to export" />
 </Frame>
 
 </Step>
@@ -88,7 +88,7 @@ Move `context7-libraries.zip` into your airgapped environment using whatever met
 In your on-premise dashboard, click **Add source**, then choose the **Context7 export** source. This source only appears on offline-license installs.
 
 <Frame>
-  ![Context7 export source on the Add sources page](/images/enterprise/library-import/import-source.png)
+  <img src="/images/enterprise/library-import/import-source.png" alt="Context7 export source on the Add sources page" />
 </Frame>
 
 </Step>
@@ -98,7 +98,7 @@ In your on-premise dashboard, click **Add source**, then choose the **Context7 e
 Select your `.zip` export (up to 100 MB). To replace libraries that already exist on this install, enable **Overwrite existing libraries**. Click **Import**.
 
 <Frame>
-  ![Uploading a Context7 export to import](/images/enterprise/library-import/import-upload.png)
+  <img src="/images/enterprise/library-import/import-upload.png" alt="Uploading a Context7 export to import" />
 </Frame>
 
 Each library is queued as its own job. Follow progress on the **Parse queue** page while snippets are re-embedded locally.
@@ -112,7 +112,7 @@ Each library is queued as its own job. Follow progress on the **Parse queue** pa
 Imported libraries appear in your Repositories list with an **Imported** badge and are queryable like any other library.
 
 <Frame>
-  ![Imported badge on a library in the Repositories list](/images/enterprise/library-import/imported-badge.png)
+  <img src="/images/enterprise/library-import/imported-badge.png" alt="Imported badge on a library in the Repositories list" />
 </Frame>
 
 Because your install didn't parse these libraries from source, it can't refresh them. The Refresh action is disabled for imported libraries. To update one, export a fresh bundle from Context7 Cloud and import it again with **Overwrite existing libraries** enabled.
