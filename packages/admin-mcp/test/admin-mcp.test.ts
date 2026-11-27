@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createAdminHandler } from "../src/http.js";
+import { BENCHMARK_AREAS, newestFirst, weakestAreas } from "../src/benchmark-areas.js";
 import { agentActivity, normalizeLibraryId, poll, TOOLS } from "../src/tools.js";
 
 // The server under test is the web-standard handler, driven by a real MCP
@@ -748,6 +749,81 @@ test("get_library_benchmarks gives the lowest scores first", async () => {
   const body = JSON.parse(text(result).split("\n").slice(2, -1).join("\n"));
   expect(body.benchmarks.map((b: { query: string }) => b.query)).toEqual(["b", "c"]);
   expect(apiCalls[0].path).toBe(`/v2/teamspaces/${TS}/libraries/acme/docs/benchmarks`);
+});
+
+test("get_library_benchmarks with order newest sorts by date, whatever order the API sent", async () => {
+  apiReply = () => ({
+    body: {
+      stats: { count: 3 },
+      benchmarks: [
+        { score: 80, benchmarkDate: "2026-11-20T10:00:00.000Z" },
+        { score: 20, benchmarkDate: "2026-11-26T10:00:00.000Z" },
+        { score: 50, benchmarkDate: "2026-11-23T10:00:00.000Z" },
+      ],
+    },
+  });
+  const result = await (
+    await connect()
+  ).callTool({
+    name: "get_library_benchmarks",
+    arguments: { teamspace: TS, library_id: "/acme/docs", order: "newest", limit: 2 },
+  });
+  const body = JSON.parse(text(result).split("\n").slice(2, -1).join("\n"));
+  expect(body.benchmarks.map((b: { score: number }) => b.score)).toEqual([20, 50]);
+});
+
+// The keys and maxima are the management API's `subscores` (context7app `BenchmarkResult`) and
+// the grader's prompt (context7parser `scoreQuestionPrompt`): a rename there must fail here.
+describe("benchmark areas", () => {
+  // One graded answer as the API sends it.
+  const answer = (subscores: Record<string, number | null>) => ({
+    benchmarkDate: "2026-11-26T23:01:25.608Z",
+    score: 52,
+    subscores,
+  });
+
+  test("the criteria are the API's five sub-scores, 100 points in all", () => {
+    expect(BENCHMARK_AREAS.map(({ key, max }) => [key, max])).toEqual([
+      ["implementation", 40],
+      ["api", 25],
+      ["relevance", 20],
+      ["completeness", 10],
+      ["clarity", 5],
+    ]);
+  });
+
+  test("each criterion's average share of its points, weakest first", () => {
+    const areas = weakestAreas([
+      answer({ implementation: 20, api: 25, relevance: 10, completeness: 1, clarity: 5 }),
+      answer({ implementation: 40, api: 25, relevance: 10, completeness: 3, clarity: null }),
+    ]);
+    expect(areas.map(({ key, score }) => [key, score])).toEqual([
+      ["completeness", 20],
+      ["relevance", 50],
+      ["implementation", 75],
+      ["api", 100],
+      ["clarity", 100],
+    ]);
+  });
+
+  test("answers on another scale or with other keys give no figure, never one above 100", () => {
+    expect(
+      weakestAreas([
+        answer({ implementation: 62, api: 80, relevance: 55, completeness: 40, clarity: 90 }),
+        {},
+        answer({ implementationScore: 30 }),
+      ])
+    ).toEqual([]);
+  });
+
+  test("newestFirst puts an answer without a date last", () => {
+    const rows = [
+      { score: 1 },
+      { score: 2, benchmarkDate: "2026-11-01T00:00:00.000Z" },
+      { score: 3, benchmarkDate: "2026-11-02T00:00:00.000Z" },
+    ];
+    expect(newestFirst(rows).map((row) => row.score)).toEqual([3, 2, 1]);
+  });
 });
 
 // The API finds a library rule only with its library id, which agents leave out.

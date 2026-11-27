@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { Subscores } from "../../src/benchmark-areas";
 import type { ConsoleRead } from "../../src/tools";
 import { host } from "./host";
 
@@ -108,7 +109,8 @@ export type Benchmarks = {
     maxScore: number | null;
     latestBenchmarkDate: string | null;
   };
-  benchmarks: { benchmarkDate: string; score: number; query: string; explanation?: string }[];
+  /** Graded answers. The questions are Context7 users' queries, so the API never returns them. */
+  benchmarks: { benchmarkDate: string; score: number; subscores?: Subscores }[];
 };
 
 export type Site = {
