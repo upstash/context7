@@ -5,7 +5,7 @@ description: Turn on experimental Context7 MCP tools, such as documentation feed
 
 Experimental tools are Context7 MCP tools that are still in development. They are off by default. They can change or be removed without notice.
 
-Two experimental tools can be turned on: [documentation feedback](#documentation-feedback) and [upgrade guides](#upgrade-guides). [Source code search](#source-code-search) is turned off for now: the dashboard does not offer it.
+One experimental tool can be turned on: [documentation feedback](#documentation-feedback). [Upgrade guides](#upgrade-guides) and [source code search](#source-code-search) are turned off for now: the dashboard does not offer them.
 
 ## Turn them on
 
@@ -112,6 +112,8 @@ approval_mode = "approve"
 ## Upgrade guides
 
 With upgrade guides on, the server lists a `get-upgrade-guide` tool. The agent calls it when you upgrade a library, or ask what changed between two versions. It returns one guide with the prerequisites, codemods, breaking changes, deprecations, and behavior and config changes from the release notes, changelogs and migration guides of every release in between, each with its source. It adds the public API changes found in the source code of both versions, including those no note mentions. The target version does not contain releases of an older line published after a newer line had started, such as Express 4.x releases published after 5.0.0, so the guide leaves them out and names them in its header.
+
+Upgrade guides are turned off for now. With a flag, the server still lists `get-upgrade-guide`, but it answers that upgrade guides are off, and the agent uses `query-docs` instead.
 
 | Field | Description |
 | --- | --- |
