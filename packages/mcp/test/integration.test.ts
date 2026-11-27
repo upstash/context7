@@ -2324,6 +2324,7 @@ describe("code tools", () => {
       expect(grep.query?.get("operation")).toBe("grep");
       // The API answers "being indexed" after a short wait, so the agent is not held.
       expect(grep.query?.get("wait")).toBe("5");
+      expect(grep.query?.get("heading")).toBe("true");
       expect(grep.query?.get("pattern")).toBe("use(Router|Params)");
       expect(grep.query?.get("path")).toBe("packages/next");
       expect(grep.query?.getAll("glob")).toEqual([
