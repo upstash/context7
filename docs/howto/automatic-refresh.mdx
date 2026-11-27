@@ -1,0 +1,81 @@
+---
+title: Automatic Refresh
+description: Refresh private GitHub libraries on a schedule or after every push
+---
+
+Automatic refresh keeps a private GitHub library current without manual refreshes. Context7 refreshes it on a schedule, or soon after each push to the branch it tracks. A refresh runs, and is billed, only when the branch has new commits that change the documentation.
+
+<Note>
+Automatic refresh is available to teamspaces on the Pro and Enterprise plans, for private repositories on github.com. It is off by default for every library. GitLab, Bitbucket, other Git providers and GitHub Enterprise Server are not supported; refresh those [manually](/howto/private-sources#refreshing-documentation).
+</Note>
+
+## Before you start
+
+- The library must be one of your teamspace's [private sources](/howto/private-sources), added from GitHub.
+- You must be an owner or admin of the teamspace.
+- The Context7 GitHub App must be installed on the repository, through an installation your GitHub account can use, and your GitHub account must be able to read the repository. Context7 checks both when you turn a mode on. Refreshes then use the App's access, not your account's.
+
+## Turn on automatic refresh
+
+<Steps>
+  <Step title="Open the Sources tab">
+    Go to your teamspace's **Sources** tab and find the **Automatic Refresh** card.
+  </Step>
+  <Step title="Choose a mode for a library">
+    Pick a mode next to the library:
+
+    - **Off**: refreshed only when you refresh it.
+    - **Weekly**, **Daily** or **Hourly**: refreshed on that schedule when the branch has new commits.
+    - **On every push**: refreshed a few minutes after a push to the tracked branch.
+  </Step>
+  <Step title="Confirm the cost">
+    Context7 shows the price, the typical cost of one refresh of this library and the most the mode could cost in a month. Select **Turn on automatic refresh** to save.
+  </Step>
+</Steps>
+
+You can change the mode or turn it off at any time. Turning a mode off never needs GitHub access.
+
+## Plan limits
+
+| | Pro | Enterprise |
+| --- | --- | --- |
+| Shortest time between automatic refreshes of a library | 3 hours | 30 minutes |
+| Automatic refreshes per library per day | 6 | 48 |
+| Libraries with automatic refresh on | 10 per teamspace | No limit |
+
+On Pro, **Hourly** runs every 3 hours, and pushes that arrive inside the 3-hour window are combined into one refresh at its end. A burst of pushes always makes a single refresh.
+
+If a teamspace moves from Enterprise to Pro, its first 10 libraries keep refreshing, in the order their automatic refresh was turned on. The card marks the others as not running on the current plan; turn some off or upgrade. On the Free plan no automatic refresh runs.
+
+## What a refresh costs
+
+Automatic refreshes are billed like manual ones: their parse tokens are charged to the teamspace at $5 per 1M tokens. See [Plans & Pricing](/plans-pricing).
+
+Most automatic refreshes cost much less than the first parse:
+
+- A scheduled check whose branch has no new commit starts no refresh and costs nothing.
+- A new commit that changes no documentation is skipped.
+- On a refresh, unchanged pages come from the cache, so only changed pages are billed.
+
+When you turn a mode on, the estimate uses this library's recent refreshes. With no history, it uses the typical cost of a private refresh. The monthly figure is an upper bound: it assumes every scheduled run, or every push, found documentation changes.
+
+## When a refresh pauses
+
+The card shows when a library is paused, and why:
+
+- **The GitHub App no longer reaches the repository.** The App was uninstalled or lost access to the repository. Give the App access to the repository again, then select **Resume**.
+- **Repeated failures.** After a failed refresh Context7 tries again after 15 minutes, 1 hour and 6 hours, then pauses. Fix the cause (for example a branch that no longer exists), then select **Resume**.
+
+## Shared libraries
+
+A library several teamspaces track is refreshed once for all of them. Each teamspace still sees its own mode. A scheduled refresh is billed to the teamspace whose schedule was due, so a weekly teamspace never pays for another teamspace's hourly refreshes.
+
+## Use the API
+
+Read or set a library's mode with the management API: [Get automatic refresh](/api-reference/teamspace-libraries/get-automatic-refresh) and [Set automatic refresh](/api-reference/teamspace-libraries/set-automatic-refresh) (`PUT` with `{ "mode": "off" | "weekly" | "daily" | "hourly" | "push" }`). Setting a mode needs an API key with **Write access**. The [Admin MCP](/howto/admin-mcp) server uses the same API.
+
+## Related
+
+- [Add Private Sources](/howto/private-sources)
+- [Keeping Libraries Fresh](/library-updates), for public libraries
+- [Automatic Repository Updates](/enterprise/automatic-repository-updates), for on-premise installations
