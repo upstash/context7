@@ -43,12 +43,12 @@ repos:
 | Field | Description |
 | ----- | ----------- |
 | `url` | The repository, as `https://github.com/owner/repo`. `repoUrl` is accepted too. |
-| `branch` | The branch to parse. Empty or absent means the repository's default branch. |
+| `branch` | The branch to parse. Empty or absent means the repository's default branch for a new library; a library that already tracks a branch keeps it. |
 | `folders` | Folders to parse. Absent means every folder. |
 | `excludeFolders`, `excludeFiles` | Folders and files to skip. Absent means Context7's default excludes, such as test and example folders. An empty list `[]` turns the defaults off. |
 | `refresh` | Sets the library's [automatic refresh](/howto/automatic-refresh) mode: `off`, `weekly`, `daily`, `hourly` or `push`. Absent leaves the mode as it is. Cloud only. |
 
-Removing a field from an entry is a change too: the library goes back to that field's default and is re-parsed.
+Removing `folders`, `excludeFolders` or `excludeFiles` from an entry is a change too: the library goes back to that field's default and is re-parsed. Removing `branch` or `refresh` leaves the library's current branch or mode as it is.
 
 The manifest is checked as a whole before anything changes. An unknown field, a credential in a URL, a library listed twice, or more entries than your plan allows rejects the whole sync, so a broken manifest never applies in part.
 
