@@ -1601,6 +1601,9 @@ Prometheus receives these metric families:
   credential challenges, metadata discovery, credentialed initialization, and authenticated tool
   use
 - `context7_mcp_upstream_requests_active` and `context7_mcp_authentication_active`
+- `context7_mcp_team_skills_calls_total` for team skill calls the server answered, labelled
+  `context7_team_skill_call` (`list`, `get` or `read`); it has no teamspace or skill label, since
+  skill names are private and unbounded
 - `nodejs_eventloop_*`, `v8js_gc_duration`, `v8js_memory_heap_*`, and
   `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
 

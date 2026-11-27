@@ -266,6 +266,11 @@ export async function observeAuthentication<T extends AuthenticationObservation>
   }
 }
 
+/** Counts one team skill call. No teamspace or skill label: names are private and unbounded. */
+export function recordTeamSkillCall(call: TeamSkillCall): void {
+  getInstruments().teamSkillCalls.add(1, { "context7.team_skill.call": call });
+}
+
 const MAX_BATCH_CLIENT_NAMES = 50;
 const batchClientNames = new Set<string>();
 
@@ -274,11 +279,6 @@ const batchClientNames = new Set<string>();
  * caller's User-Agent. The header is caller-controlled, so the label set is
  * capped per process; later names are counted as "other".
  */
-/** Counts one team skill call. No teamspace or skill label: names are private and unbounded. */
-export function recordTeamSkillCall(call: TeamSkillCall): void {
-  getInstruments().teamSkillCalls.add(1, { "context7.team_skill.call": call });
-}
-
 export function recordSelfCancellingBatch(userAgent: string | undefined): void {
   let client = /^[\w.-]{1,40}/.exec(userAgent ?? "")?.[0].toLowerCase() ?? "unknown";
   if (!batchClientNames.has(client)) {
