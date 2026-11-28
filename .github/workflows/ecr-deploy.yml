@@ -8,15 +8,25 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
-  id-token: write
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # The ECR role trusts only repo:upstash/context7:environment:release.
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
+      - name: Check version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! [[ "$VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::version must be semver, for example v0.0.22"
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v7
 
@@ -53,10 +63,12 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Create GitHub Summary
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
           echo "## Docker Image Deployed Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image Tag:** \`${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
           echo "**Platforms:** \`linux/amd64\`, \`linux/arm64\`" >> $GITHUB_STEP_SUMMARY
           echo "**Digest:** \`${{ steps.build-push.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
