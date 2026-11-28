@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-admin-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "Context7 Admin: remote MCP server to manage Context7 teamspaces, libraries, Docs7 sites and Ask sites",
   "type": "module",
