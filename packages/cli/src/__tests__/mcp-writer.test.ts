@@ -134,4 +134,18 @@ describe("patchJsonConfig", () => {
     expect(await patchJsonConfig(configPath, ["servers"], {})).toBe(false);
     expect(await readFile(configPath, "utf-8")).toBe("{ not json");
   });
+
+  test.each([
+    ["an array", `{\n  "servers": []\n}\n`],
+    ["a string", `{\n  "servers": "none"\n}\n`],
+    ["a number", `{\n  "servers": 3\n}\n`],
+    ["null", `{\n  "servers": null\n}\n`],
+  ])("declines a section that is %s instead of throwing", async (_label, raw) => {
+    await writeFile(configPath, raw, "utf-8");
+
+    // `modify` throws on a non-object parent, which used to escape setup and
+    // abort it; declining keeps the caller's full-rewrite fallback reachable.
+    expect(await patchJsonConfig(configPath, ["servers", "context7"], CONTEXT7_ENTRY)).toBe(false);
+    expect(await readFile(configPath, "utf-8")).toBe(raw);
+  });
 });
