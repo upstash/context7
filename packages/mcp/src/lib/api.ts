@@ -26,6 +26,10 @@ import {
   rememberInvalidOAuthToken,
 } from "./oauth-token-validation.js";
 import { isClerkOAuthJwt } from "./jwt.js";
+import {
+  readStoredExperimentalTools,
+  storeExperimentalTools,
+} from "./experimental-tools-disk-cache.js";
 
 /**
  * Ceiling on a single Context7 API call. Without a signal a stalled backend
@@ -674,6 +678,16 @@ async function lookUpExperimentalTools(
     rememberExperimentalTools(cacheKey, tools, EXPERIMENTAL_TOOLS_FAILURE_TTL_MS);
     return { tools, failure };
   };
+  // Each stdio session is a new process, so only the disk can carry the answer to the next one.
+  // An HTTP server serves many users and keeps to its memory.
+  const diskKey = context.transport === "stdio" ? context.apiKey : undefined;
+  if (diskKey) {
+    const stored = await readStoredExperimentalTools(diskKey);
+    if (stored) {
+      rememberExperimentalTools(cacheKey, stored.tools, stored.expiresAt - Date.now());
+      return { tools: stored.tools };
+    }
+  }
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/mcp/experimental-tools`);
     // No experimental header here: this call decides whether there are any.
@@ -698,6 +712,7 @@ async function lookUpExperimentalTools(
         }
         const tools = experimentalToolsFromChoice(await readJson<unknown>(response));
         rememberExperimentalTools(cacheKey, tools, EXPERIMENTAL_TOOLS_TTL_MS);
+        if (diskKey) await storeExperimentalTools(diskKey, tools);
         return { tools };
       },
       { abortSignal }
@@ -712,7 +727,8 @@ async function lookUpExperimentalTools(
  * (`GET /v2/mcp/experimental-tools`), for the stdio server and an HTTP server without the
  * snapshot (`experimental-tools-snapshot.ts`). Without a credential none: the server then lists
  * only the stable tools. When the lookup fails, the last known choice (or none), and `onFailure`
- * gets the cause once per lookup. Cached per credential (a hash, never the token).
+ * gets the cause once per lookup. Cached per credential (a hash, never the token), and for stdio
+ * also on disk for the next process (`experimental-tools-disk-cache.ts`).
  */
 export async function fetchExperimentalTools(
   context: ClientContext,

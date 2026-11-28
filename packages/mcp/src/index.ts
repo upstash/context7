@@ -943,7 +943,8 @@ async function main() {
       isEnabledFlag(process.env.CONTEXT7_EXPERIMENTAL) ||
       isEnabledFlag(process.env.CONTEXT7_RESEARCH_PREVIEW);
     stdioSessionId = randomUUID();
-    // Read once at start: a dashboard change shows after the client restarts the server.
+    // Read once at start, from a cache of up to 5 minutes: a dashboard change shows when the
+    // client starts the server again at least 5 minutes after the change.
     stdioExperimentalTools = stdioExperimental
       ? EXPERIMENTAL_TOOL_NAMES
       : await fetchExperimentalTools(
