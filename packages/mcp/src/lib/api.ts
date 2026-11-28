@@ -365,8 +365,6 @@ export async function fetchLibraryCode(
     if (request.after_context !== undefined)
       url.searchParams.set("after_context", String(request.after_context));
     if (request.word_regexp) url.searchParams.set("word_regexp", "true");
-    if (request.multiline) url.searchParams.set("multiline", "true");
-    if (request.multiline_dotall) url.searchParams.set("multiline_dotall", "true");
     if (request.output_mode) url.searchParams.set("output_mode", request.output_mode);
     if (request.head_limit !== undefined)
       url.searchParams.set("head_limit", String(request.head_limit));

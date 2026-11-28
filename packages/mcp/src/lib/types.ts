@@ -73,8 +73,6 @@ export type CodeRequest = {
   before_context?: number;
   after_context?: number;
   word_regexp?: boolean;
-  multiline?: boolean;
-  multiline_dotall?: boolean;
   output_mode?: (typeof CODE_OUTPUT_MODES)[number];
   head_limit?: number;
   offset?: number;

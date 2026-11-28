@@ -1430,7 +1430,7 @@ Context7 MCP provides the following tools that LLMs can use:
   - `language` (optional): The programming language you write in, used to rank code examples in that language first
 
 - `grep-code`, `glob-code`, `read-code` and `find-symbol` (experimental): Search and read a library's source code at the version its docs describe. They take the parameters of the Grep, Glob and Read tools that coding agents have, with `libraryId` and an optional `version` (a git tag) added. Listed only when the code tools are on: turn them on at [Dashboard > Settings > MCP Tools](https://context7.com/dashboard?tab=settings) for a signed-in client, or turn on every experimental tool with `--experimental` or `CONTEXT7_EXPERIMENTAL=1` (stdio), or `?experimental=1` on the MCP URL (HTTP).
-  - `grep-code`: ripgrep over the source. `pattern` (required), `path`, `glob`, `type`, `output_mode` (`content`, `files_with_matches`, `count`), `-A`, `-B`, `-C`, `-i`, `-F`, `-w`, `multiline`, `head_limit`, `offset`
+  - `grep-code`: ripgrep over the source. `pattern` (required), `path`, `glob`, `type`, `output_mode` (`content`, `files_with_matches`, `count`), `-A`, `-B`, `-C`, `-i`, `-F`, `-w`, `head_limit`, `offset`
   - `glob-code`: files by name. `pattern` (a glob such as `**/*client*.ts`), `path`, `head_limit`, `offset`; with `path` and no `pattern`, the files and folders of that folder
   - `read-code`: numbered lines of a file. `file_path` (required), `offset` (first line), `limit` (at most 200 lines)
   - `find-symbol`: `operation` `definition`, `references` (resolved with SCIP where indexed) or `outline`, with `symbol`, and `path` for a file
