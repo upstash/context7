@@ -10,6 +10,9 @@ import { createDecipheriv, createHash } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
+import { serverInstructions } from "../src/lib/server-instructions.js";
+import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "../src/lib/tool-names.js";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -806,19 +809,20 @@ describe("experimental tools", () => {
   const stdioTransport = (env: Record<string, string>) =>
     new StdioClientTransport({ command: process.execPath, args: [DIST], env });
 
-  async function withClient<T>(
-    url: string,
-    run: (client: Client) => Promise<T>,
-    apiKey?: string
+  async function withTransport<T>(
+    transport: StreamableHTTPClientTransport | StdioClientTransport,
+    run: (client: Client) => Promise<T>
   ): Promise<T> {
     const client = new Client({ name: "experimental-test", version: "1.0.0" });
-    await client.connect(httpTransport(url, apiKey));
+    await client.connect(transport);
     try {
       return await run(client);
     } finally {
       await client.close();
     }
   }
+  const withClient = <T>(url: string, run: (client: Client) => Promise<T>, apiKey?: string) =>
+    withTransport(httpTransport(url, apiKey), run);
   const toolNames = (url: string) =>
     withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
 
@@ -832,6 +836,25 @@ describe("experimental tools", () => {
     expect(
       await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" }))
     ).toBe("private");
+  });
+
+  test("returns the same server instructions over HTTP and stdio, with the experimental sections only when those tools are on", async () => {
+    const instructions = (transport: StreamableHTTPClientTransport | StdioClientTransport) =>
+      withTransport(transport, async (client) => client.getInstructions() ?? "");
+    const httpText = await instructions(httpTransport(httpUrl));
+    expect(httpText).toBe(serverInstructions());
+    expect(await instructions(stdioTransport(childEnv))).toBe(httpText);
+
+    expect(await instructions(httpTransport(`${httpUrl}?experimental=1`))).toBe(
+      serverInstructions({ codeTools: true, feedbackRequest: true })
+    );
+  });
+
+  test("asks clients to load resolve-library-id and query-docs up front", async () => {
+    const tools = await withClient(httpUrl, async (client) => (await client.listTools()).tools);
+    for (const name of [RESOLVE_LIBRARY_ID_TOOL, QUERY_DOCS_TOOL]) {
+      expect(tools.find((t) => t.name === name)?._meta).toMatchObject(ALWAYS_LOAD_META);
+    }
   });
 
   test("lists every experimental tool with ?experimental=1 or its old name", async () => {
@@ -945,7 +968,7 @@ describe("experimental tools", () => {
     await client.connect(httpTransport(httpUrl, "ctx7sk-no-tools-1"));
     try {
       const discover = client.getDiscoverResult() as { instructions?: string };
-      expect(discover.instructions).toContain("Use this server to fetch current documentation");
+      expect(discover.instructions).toBe(serverInstructions());
       expect(discover.instructions).not.toContain("grep-code");
     } finally {
       await client.close();
