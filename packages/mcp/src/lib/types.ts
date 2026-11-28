@@ -88,7 +88,7 @@ export interface ClientContext {
     version?: string;
   };
   plugin?: string;
-  mcpEndpoint?: "/mcp" | "/mcp/oauth";
+  mcpEndpoint?: "/mcp" | "/mcp/oauth" | "/mcp/ema";
   mcpAuthMode?: "observe" | "required";
   transport?: "stdio" | "http";
   sessionId?: string;
