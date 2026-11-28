@@ -7,8 +7,10 @@ import {
   isOAuthTokenRememberedInvalid,
   isOpaqueOAuthToken,
   isOpaqueOAuthTokenValidationEnabled,
+  rememberedInvalidOAuthTokenReason,
   validateOpaqueOAuthToken,
 } from "./oauth-token-validation.js";
+import { FOREIGN_OAUTH_AUDIENCE_MESSAGE } from "./oauth-audience.js";
 import type {
   AuthenticationObservation,
   AuthenticationMethod,
@@ -100,6 +102,32 @@ export function effectiveMcpAuthMode(
 }
 
 /**
+ * The 401 for a token the Context7 API refused. A token issued for another
+ * server is told so, since signing in again would only mint another such
+ * token; anything else reads as expired so the client refreshes its sign-in.
+ */
+function rejectRememberedInvalid(
+  token: string,
+  method: McpAuthDecision["method"]
+): McpAuthDecision {
+  return rememberedInvalidOAuthTokenReason(token) === "foreign_audience"
+    ? {
+        allowed: false,
+        method,
+        error: FOREIGN_OAUTH_AUDIENCE_MESSAGE,
+        event: "credential_rejected",
+        outcome: "invalid",
+      }
+    : {
+        allowed: false,
+        method,
+        error: EXPIRED_OAUTH_TOKEN_ERROR,
+        event: "credential_rejected",
+        outcome: "expired",
+      };
+}
+
+/**
  * Decide whether the HTTP request may reach the MCP transport. JWTs are
  * verified at this boundary. Opaque OAuth tokens are checked against the
  * Context7 API (cached per token) so an expired sign-in gets the HTTP 401 that
@@ -129,15 +157,7 @@ export async function evaluateMcpAuthentication(
 
   if (isOpaqueOAuthToken(token) && isOpaqueOAuthTokenValidationEnabled()) {
     const verdict = await validateOpaqueOAuthToken(token);
-    if (verdict === "invalid") {
-      return {
-        allowed: false,
-        method,
-        error: EXPIRED_OAUTH_TOKEN_ERROR,
-        event: "credential_rejected",
-        outcome: "expired",
-      };
-    }
+    if (verdict === "invalid") return rejectRememberedInvalid(token, method);
     return verdict === "valid"
       ? { allowed: true, method, event: "credential_validated", outcome: "accepted" }
       : { allowed: true, method, event: "credential_present", outcome: "unverified" };
@@ -153,13 +173,7 @@ export async function evaluateMcpAuthentication(
   }
 
   if (isClerkOAuthJwt(token) && isOAuthTokenRememberedInvalid(token)) {
-    return {
-      allowed: false,
-      method,
-      error: EXPIRED_OAUTH_TOKEN_ERROR,
-      event: "credential_rejected",
-      outcome: "expired",
-    };
+    return rejectRememberedInvalid(token, method);
   }
 
   const validation = await validateJWT(token);

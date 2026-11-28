@@ -32,7 +32,7 @@ const ENFORCEMENT_MODES: readonly OAuthAudienceEnforcement[] = ["observe", "fore
 
 /** Shown to a client whose token was issued for another resource server. */
 export const FOREIGN_OAUTH_AUDIENCE_MESSAGE =
-  "This token was issued for another server. If you connect through a gateway or proxy, use a Context7 API key instead.";
+  "This token was issued for another server. If you connect through a gateway or proxy, add it as a trusted gateway in your teamspace's Enterprise settings, or use a Context7 API key.";
 
 /** The forms of the MCP resource identifier clients have been seen to request. */
 export function defaultOAuthAllowedAudiences(resourceUrl = RESOURCE_URL): string[] {
