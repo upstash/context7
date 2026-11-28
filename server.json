@@ -45,6 +45,10 @@
           "isSecret": true
         }
       ]
+    },
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.context7.com/mcp/oauth"
     }
   ]
 }
