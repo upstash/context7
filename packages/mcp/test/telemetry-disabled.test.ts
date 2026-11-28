@@ -14,6 +14,7 @@ const {
   initializeTelemetry,
   observeAuthentication,
   recordAuthenticationEvent,
+  recordTeamSkillCall,
   recordToolCallOutcome,
   observeUpstreamRequest,
 } = await import("../src/lib/telemetry-runtime.js");
@@ -44,6 +45,7 @@ test("OTEL_SDK_DISABLED bypasses all application metric instruments", async () =
     initializeTelemetry({ allowEmbeddedPrometheus: true, serviceVersion: "test" })
   ).resolves.toBeUndefined();
   expect(() => recordToolCallOutcome("success")).not.toThrow();
+  expect(() => recordTeamSkillCall("read")).not.toThrow();
   expect(() =>
     recordAuthenticationEvent({
       enforcementMode: "required",

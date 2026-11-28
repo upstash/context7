@@ -67,3 +67,7 @@ export type AuthenticationEventObservation =
 export interface UpstreamObservationOptions {
   abortSignal?: AbortSignal;
 }
+
+/** A team skill call the hosted server answered: `skills/list` with team skills in it, a team
+ * skill's `skills/get`, or a `resources/read` of one of its files. */
+export type TeamSkillCall = "list" | "get" | "read";

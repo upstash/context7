@@ -11,6 +11,7 @@ import type {
   AuthenticationObservation,
   AuthenticationObservationOptions,
   UpstreamObservationOptions,
+  TeamSkillCall,
   UpstreamOperation,
 } from "./telemetry-contracts.js";
 import { embeddedPrometheusIsEnabled, telemetryIsDisabled } from "./telemetry-config.js";
@@ -104,6 +105,10 @@ export async function observeAuthentication<T extends AuthenticationObservation>
 
 export function recordAuthenticationEvent(observation: AuthenticationEventObservation): void {
   implementation?.recordAuthenticationEvent(observation);
+}
+
+export function recordTeamSkillCall(call: TeamSkillCall): void {
+  implementation?.recordTeamSkillCall(call);
 }
 
 export function recordSelfCancellingBatch(userAgent: string | undefined): void {

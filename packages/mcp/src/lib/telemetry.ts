@@ -8,6 +8,7 @@ import type {
   UpstreamObservationOptions,
   UpstreamOperation,
   UpstreamOutcome,
+  TeamSkillCall,
 } from "./telemetry-contracts.js";
 import type { ToolCallOutcome } from "./tool-names.js";
 
@@ -73,6 +74,11 @@ function createInstruments() {
     activeAuthentications: meter.createUpDownCounter("context7.mcp.authentication.active", {
       description: "Number of hosted MCP requests currently authenticating",
       unit: "{request}",
+    }),
+    teamSkillCalls: meter.createCounter("context7.mcp.team_skills.calls", {
+      description:
+        "Team skill calls the hosted MCP server answered (skills/list, skills/get, file reads)",
+      unit: "{call}",
     }),
   };
 }
@@ -258,6 +264,11 @@ export async function observeAuthentication<T extends AuthenticationObservation>
     authenticationAttempts.add(1, attributes);
     authenticationDuration.record(elapsedSeconds(startedAt), attributes);
   }
+}
+
+/** Counts one team skill call. No teamspace or skill label: names are private and unbounded. */
+export function recordTeamSkillCall(call: TeamSkillCall): void {
+  getInstruments().teamSkillCalls.add(1, { "context7.team_skill.call": call });
 }
 
 const MAX_BATCH_CLIENT_NAMES = 50;

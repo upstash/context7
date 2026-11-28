@@ -13,6 +13,7 @@ import {
 import { CONTEXT7_MCP_SKILL } from "./skill-md.js";
 import { canonicalSkillUri, safeDecode } from "./skill-uri.js";
 import { fetchTeamSkillFile, teamSkillsFor } from "./team-skills-snapshot.js";
+import { recordTeamSkillCall } from "./telemetry-runtime.js";
 
 /**
  * The skills one caller sees through the MCP skills extension (SEP-2640): the repo's
@@ -201,20 +202,27 @@ function directoryChildren(skills: readonly Skill[], dir: string): DirectoryReso
 
 /**
  * The skills source for one caller. `teamspaceId` is the caller's teamspace (`teamspaceOf`); the
- * snapshot is read on every call, so a request sees the skills of that moment.
+ * snapshot is read on every call, so a request sees the skills of that moment. Team skill calls
+ * are counted in the `context7.mcp.team_skills.calls` metric.
  */
 export function skillSource(teamspaceId: string | undefined): SkillSource {
   const team = () => teamSkillsFor(teamspaceId);
   const skills = () => [CONTEXT7_MCP, ...(team()?.skills ?? [])];
   return {
     async list() {
-      return { skills: skills() };
+      const current = team();
+      if (current?.skills.length) recordTeamSkillCall("list");
+      return { skills: [CONTEXT7_MCP, ...(current?.skills ?? [])] };
     },
     async get(uri) {
       const key = canonicalSkillUri(uri);
       // The SDK checks the entry against the URI as sent, so only its exact canonical form matches.
       if (key === undefined || key !== uri) return undefined;
-      return key === CONTEXT7_MCP.uri ? CONTEXT7_MCP : team()?.entries.get(key);
+      if (key === CONTEXT7_MCP.uri) return CONTEXT7_MCP;
+      const current = team();
+      const entry = current?.entries.get(key);
+      if (entry) recordTeamSkillCall("get");
+      return entry;
     },
     async read(uri) {
       const key = canonicalSkillUri(uri, { dropFragment: true });
@@ -223,7 +231,9 @@ export function skillSource(teamspaceId: string | undefined): SkillSource {
       const current = team();
       const file = current?.files.get(key);
       if (!current || !file) return undefined;
-      return readResult(key, await teamFile(current.teamspaceId, key, file));
+      const result = readResult(key, await teamFile(current.teamspaceId, key, file));
+      recordTeamSkillCall("read");
+      return result;
     },
     async readDirectory(uri) {
       const key = canonicalSkillUri(uri, { dropFragment: true })?.replace(/\/+$/, "");
