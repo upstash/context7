@@ -114,6 +114,8 @@ If you prefer the private key never touch the application (it is never written t
   </Tab>
 </Tabs>
 
+The container runs as UID `10001`, so the key must be readable by that UID. On Kubernetes, `fsGroup` makes the Secret's files readable by the pod. With Docker, change the owner of the key file on the host first, for example `sudo chown 10001 /path/to/id_ed25519`. Keep the mount outside `/data`: Docker creates a missing mount point under `/data` as root, and the server then exits at startup because it cannot write there.
+
 <Note>
 The on-premise image ships with an SSH client, so no extra packages are needed either way.
 </Note>

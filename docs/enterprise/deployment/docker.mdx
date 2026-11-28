@@ -197,22 +197,44 @@ One call never uses the proxy: the fetch of an MCP client's metadata document (C
 
 ## Running as non-root
 
-The container runs as root by default. To run it unprivileged, pass `--user`. If the volume already holds files written by a root container, or the UID you choose cannot write `/data`, chown the volume to that UID first:
+The image runs as the unprivileged user `context7`, UID `10001` and GID `10001`, the same UID the Helm chart uses. A plain `docker run` needs no `--user` flag. Images up to and including 2.0.2 ran as root.
+
+Everything Context7 writes lives under `/data`, including source clones (`/data/repos`) and documentation-agent state (`/data/home`). The only other path it writes is `/tmp`. A new volume starts with `/data` owned by UID `10001` and group `0` and group-writable, so a new deployment needs no `chown`.
+
+### Upgrading from an image that ran as root
+
+A volume written by an image that ran as root holds files owned by root. UID `10001` cannot write them, so the server exits at startup and names the paths it could not write. Before you start the new image, stop the old container and chown the volume once:
+
+```bash
+docker stop context7 && docker rm context7
+```
 
 ```bash
 docker run --rm -v context7-data:/data alpine chown -R 10001:10001 /data
+```
 
+Then start the new image as usual. With a bind mount instead of a named volume, run `sudo chown -R 10001:10001` on the host directory.
+
+If you mount a Git SSH deploy key, for example under `/root/.ssh/`, the new image does not read it there. Mount it outside `/data`, make it readable by UID `10001`, and point `GIT_SSH_COMMAND` at it, or paste the key in the dashboard instead: see [Other Git](/enterprise/integrations/other-git#ssh-deploy-key). Do not mount it under `/data`. Docker creates the missing directories there as root, and the server then exits at startup.
+
+### Running as a different UID
+
+Any UID works. Pass `--user`, and chown the volume to that UID first if it cannot write `/data`:
+
+```bash
+docker run --rm -v context7-data:/data alpine chown -R 12345:12345 /data
+```
+
+```bash
 docker run -d --name context7 \
-  --user 10001:10001 \
+  --user 12345:12345 \
   -v context7-data:/data \
   -e LICENSE_KEY="$LICENSE_KEY" \
   -p 3000:3000 \
   ghcr.io/context7/enterprise:latest
 ```
 
-Any UID works. Everything Context7 writes lives under `/data`, including source clones (`/data/repos`) and documentation-agent state (`/data/home`). The only other path it writes is `/tmp`.
-
-A new volume starts with `/data` owned by UID `10001` and group `0` and group-writable, so UID `10001` or any UID in group `0` needs no `chown`. If the UID cannot write `/data`, the server exits at startup with the path it could not write. This requires image 1.3.2 or later. On Kubernetes, use `fsGroup` instead and the kubelet handles the ownership: see [Kubernetes](/enterprise/deployment/kubernetes#running-as-non-root).
+A UID in group `0` needs no `chown` on a new volume. On Kubernetes, use `fsGroup` instead and the kubelet handles the ownership: see [Kubernetes](/enterprise/deployment/kubernetes#running-as-non-root).
 
 ## Scaling
 

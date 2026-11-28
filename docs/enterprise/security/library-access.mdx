@@ -110,6 +110,7 @@ With it off, they answer anonymous callers, but access rules still hide restrict
 Open **Workspace Settings** and go to **Audit log** to review library access activity. The log records:
 
 - Changes to the workspace default, library rules, and namespace rules, with the admin who made them.
+- Google Drive connector changes: an admin connects, changes, or disconnects Google Drive. Each entry shows the connection method and the account Context7 reads Drive as. For a service account key, it also shows the service account, the delegated user, and the last 6 characters of the key ID. Keys, client secrets, and tokens are never logged.
 - Access denials: a documentation request over MCP, or a dashboard or `/api/projects/...` request, for a library the caller cannot access. Each entry shows the user (or `anonymous`) and the library.
 
 <Frame>
