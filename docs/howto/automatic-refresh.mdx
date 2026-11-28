@@ -19,21 +19,25 @@ Automatic refresh is available to teamspaces on the Pro and Enterprise plans, fo
 
 <Steps>
   <Step title="Open the Sources tab">
-    Go to your teamspace's **Sources** tab and find the **Automatic Refresh** card.
+    Go to your teamspace's **Sources** tab. The **Connected Sources** table has an **Auto refresh** column on Pro and Enterprise. Sources that are not private GitHub repositories show "-" there.
   </Step>
   <Step title="Choose a mode for a library">
-    Pick a mode next to the library:
+    Pick a mode in the library's **Auto refresh** menu. Hover the menu to see the library's last automatic refresh.
 
     - **Off**: refreshed only when you refresh it.
     - **Weekly**, **Daily** or **Hourly**: refreshed on that schedule when the branch has new commits.
     - **On every push**: refreshed a few minutes after a push to the tracked branch.
   </Step>
   <Step title="Confirm the cost">
-    Context7 shows the price, the typical cost of one refresh of this library and the most the mode could cost in a month. Select **Turn on automatic refresh** to save.
+    Context7 shows the price, the typical cost of one refresh of this library and the most the mode could cost in a month. Select **Turn on** to save.
   </Step>
 </Steps>
 
-You can change the mode or turn it off at any time. Turning a mode off never needs GitHub access.
+You can change the mode or turn it off at any time. Turning a mode off never needs GitHub access. On Pro, the line under the table shows how many of your 10 libraries have automatic refresh on.
+
+<Note>
+The **Auto refresh** column is hidden on narrow screens such as phones. Open the dashboard on a wider screen to change a mode.
+</Note>
 
 ## Plan limits
 
@@ -45,7 +49,7 @@ You can change the mode or turn it off at any time. Turning a mode off never nee
 
 Both limits apply. On Pro, **Hourly** runs at most every 3 hours and stops for the day after 6 refreshes, so it never reaches the 8 that the 3-hour interval alone would allow. Pushes that arrive inside the 3-hour window are combined into one refresh at its end, and a burst of pushes always makes a single refresh.
 
-If a teamspace moves from Enterprise to Pro, its first 10 libraries keep refreshing, in the order their automatic refresh was turned on. The card marks the others as not running on the current plan; turn some off or upgrade. On the Free plan no automatic refresh runs.
+If a teamspace moves from Enterprise to Pro, its first 10 libraries keep refreshing, in the order their automatic refresh was turned on. A warning icon in the **Auto refresh** column marks the others as not running on the current plan; turn some off or upgrade. On the Free plan no automatic refresh runs, and a library that kept a mode from a paid plan can only be turned **Off**.
 
 ## What a refresh costs
 
@@ -61,10 +65,10 @@ When you turn a mode on, the estimate uses this library's recent refreshes. With
 
 ## When a refresh pauses
 
-The card shows when a library is paused, and why:
+A paused library shows an amber play icon in the **Auto refresh** column. Hover it to see why it paused:
 
-- **The GitHub App no longer reaches the repository.** The App was uninstalled or lost access to the repository. Give the App access to the repository again, then select **Resume**.
-- **Repeated failures.** After a failed refresh Context7 tries again after 15 minutes, 1 hour and 6 hours, then pauses. Fix the cause (for example a branch that no longer exists), then select **Resume**.
+- **The GitHub App no longer reaches the repository.** The App was uninstalled or lost access to the repository. Give the App access to the repository again, then select the play icon to resume.
+- **Repeated failures.** After a failed refresh Context7 tries again after 15 minutes, 1 hour and 6 hours, then pauses. Fix the cause (for example a branch that no longer exists), then select the play icon to resume.
 
 ## Shared libraries
 
