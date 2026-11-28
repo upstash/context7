@@ -21,6 +21,18 @@
     {
       "source": "/agentic-tools/overview",
       "destination": "/agentic-tools"
+    },
+    {
+      "source": "/ask/overview",
+      "destination": "/overview"
+    },
+    {
+      "source": "/ask/quickstart",
+      "destination": "/overview"
+    },
+    {
+      "source": "/ask/dashboard",
+      "destination": "/overview"
     }
   ],
   "colors": {
@@ -51,13 +63,9 @@
                   "adding-libraries",
                   "library-updates",
                   "howto/claiming-libraries", "howto/verification", "howto/chat-widget",
-                  "howto/rules", "howto/private-sources", "howto/automatic-refresh", "howto/gitops", "howto/experimental-tools"
+                  "howto/rules", "howto/private-sources", "howto/automatic-refresh", "howto/gitops", "howto/experimental-tools",
+                  "howto/skills-over-mcp"
                 ]
-              },
-              {
-                "group": "Ask",
-                "expanded": false,
-                "pages": ["ask/overview", "ask/quickstart", "ask/dashboard"]
               },
               {
                 "group": "Account",

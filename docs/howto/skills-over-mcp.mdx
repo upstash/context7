@@ -1,0 +1,55 @@
+---
+title: Skills over MCP
+description: Install Agent Skills once in the dashboard and serve them to every member's agent through the Context7 MCP server
+---
+
+Skills over MCP lets you install Agent Skills (folders with a `SKILL.md`) once, from the dashboard. The Context7 MCP server then serves them to every member of your teamspace. Agents list them next to the Context7 tools and load one when a task needs it.
+
+- **One place to manage them**: owners and admins choose the skills for the whole teamspace.
+- **Always the latest version**: a skill can follow its GitHub branch, so new versions arrive on their own.
+- **Nothing on disk**: members install nothing on their machine.
+- **Shared with the team**: everyone who connects to Context7 with the teamspace gets the same skills.
+
+Manage them from the [Skills tab](https://context7.com/dashboard?tab=skills) of your dashboard.
+
+<Note>Skills over MCP is in beta and available on every plan. Only owners and admins can add, update or remove skills; developers see them read-only.</Note>
+
+## Add skills
+
+1. Open the [Skills tab](https://context7.com/dashboard?tab=skills) and select **Browse skills.sh**.
+2. Search [skills.sh](https://skills.sh), or paste a public GitHub repository, a folder in it, or a `tree/<branch>/<path>` URL.
+3. Pick the skills to install, choose **Track latest** or **Pin to** a commit, and select **Install**.
+
+Private repositories are not supported yet. A teamspace can install up to 50 skills, and a skill can have up to 512 files and 16 MiB.
+
+## Use them in your agent
+
+Members get the teamspace's skills when their agent connects to the remote Context7 MCP server, `https://mcp.context7.com/mcp`, with:
+
+- [OAuth](/howto/oauth), with the teamspace picked at sign-in, or
+- an [API key](/howto/api-keys) of the teamspace.
+
+The local server (`@upstash/context7-mcp`) does not serve teamspace skills.
+
+The agent must also read skills from MCP servers. Claude Code needs version 2.1.331 or later and an interactive session. Skills show up under the server's name, such as `context7:frontend-design`. On Claude Team and Enterprise plans, an admin turns the feature on first. See [Claude Code's requirements](https://code.claude.com/docs/en/mcp#use-skills-from-mcp-servers).
+
+A new or removed skill reaches agents within a minute or two. Start a new session to see it at once.
+
+## Updates
+
+- **Track latest** (the default): Context7 checks the skill's branch every hour. A new version goes live once it passes the [safety checks](#safety-checks). Members' agents ask them to approve the changed skill.
+- **Pin**: the skill stays on one commit. When its branch has a newer version, the skill shows **Newer version available**. Open the skill to pin it to a newer version or to one from its history, or switch it back to **Track latest**.
+
+## Safety checks
+
+Context7 checks every version before it goes live:
+
+- the size limits and a valid `SKILL.md`
+- the [skills.sh](https://skills.sh) security audit: a high or critical rating blocks the skill
+- Context7's content check, which reads every text file for prompt injection: a flagged file blocks the skill
+
+When a check refuses a skill, the dashboard shows why and links to the file to review on GitHub. After you review it, you can select **Install anyway…**, or **Allow anyway…** for a refused update. This turns the safety checks off for that skill: its next versions go live without them. Size limits still apply. Select **Turn scanning on** on the skill to check its next versions again.
+
+## Remove a skill
+
+Open the skill and select **Remove from teamspace**. Members' agents stop getting it within a minute or two.
