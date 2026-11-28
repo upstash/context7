@@ -65,7 +65,7 @@ The manifest is checked as a whole before anything changes. An unknown field, a 
     Add `repos.yaml` to a GitHub repository with the Context7 GitHub App installed.
   </Step>
   <Step title="Open the GitOps card">
-    Go to your teamspace's **Sources** tab and select **Set up GitOps** on the **GitOps** card.
+    Go to your teamspace's **Settings** tab and select **Set up GitOps** on the **GitOps** card. The card is shown on Pro and Enterprise teamspaces.
   </Step>
   <Step title="Fill in the settings">
     | Setting | Description |
@@ -102,6 +102,8 @@ With **Prune** on, libraries GitOps added are removed from the teamspace when th
 - **Once a day.**
 - **Sync now** in the card.
 - **From CI**, with the API below. Use this if your other code lives on GitLab or Bitbucket.
+
+No sync runs on the Free plan. If a teamspace moves to Free while GitOps is on, the card stays on the **Settings** tab so you can turn GitOps off.
 
 Push and daily syncs skip a manifest that was already applied. **Sync now** and the API always run in full, so they also add back a GitOps library someone removed in the dashboard. Only one sync runs per teamspace at a time.
 
