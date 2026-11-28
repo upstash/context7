@@ -150,10 +150,20 @@ export async function patchJsonConfig(
   return true;
 }
 
+/**
+ * Index of `header` where it is a table header line, or -1. A plain substring
+ * search also matches a commented-out `# [mcp_servers.context7]`.
+ */
+function indexOfTomlHeader(raw: string, header: string): number {
+  const escaped = header.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`^[\\t ]*${escaped}[\\t ]*(?:#.*)?\\r?$`, "m").exec(raw);
+  return match ? match.index + match[0].indexOf(header) : -1;
+}
+
 export async function readTomlServerExists(filePath: string, serverName: string): Promise<boolean> {
   try {
     const raw = await readFile(filePath, "utf-8");
-    return raw.includes(`[mcp_servers.${serverName}]`);
+    return indexOfTomlHeader(raw, `[mcp_servers.${serverName}]`) !== -1;
   } catch {
     return false;
   }
@@ -260,11 +270,11 @@ export async function appendTomlServer(
   } catch {}
 
   const sectionHeader = `[mcp_servers.${serverName}]`;
-  const alreadyExists = existing.includes(sectionHeader);
+  const startIdx = indexOfTomlHeader(existing, sectionHeader);
+  const alreadyExists = startIdx !== -1;
 
   if (alreadyExists) {
     const subPrefix = `[mcp_servers.${serverName}.`;
-    const startIdx = existing.indexOf(sectionHeader);
     const rest = existing.slice(startIdx + sectionHeader.length);
 
     let endOffset = rest.length;
@@ -310,7 +320,7 @@ export async function removeTomlServer(
   }
 
   const sectionHeader = `[mcp_servers.${serverName}]`;
-  const startIdx = existing.indexOf(sectionHeader);
+  const startIdx = indexOfTomlHeader(existing, sectionHeader);
   if (startIdx === -1) {
     return { removed: false };
   }
